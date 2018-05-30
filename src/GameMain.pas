@@ -60,11 +60,13 @@ begin
     result := (CheckButtonIsHovered(_btn)) and (MouseClicked(LeftButton));
 end;
 
-procedure LoadAssets(var connectButton, pauseButton : UIButton);
+procedure LoadAssets(var connectButton, pauseButton, nextButton, previousButton : UIButton);
 begin
     // Create our UI buttons
     connectButton := CreateUIButton(10, 10, 80, 30, ColorGrey, ColorBlack, 'Connect!');
     pauseButton := CreateUIButton(10, 50, 80, 30, ColorGrey, ColorBlack, 'Pause');
+    nextButton := CreateUIButton(10, 90, 80, 30, ColorGrey, ColorBlack, 'Next');
+    previousButton := CreateUIButton(10, 130, 80, 30, ColorGrey, ColorBlack, 'Previous');
 end;
 
 procedure DrawUIButton(_btn : UIButton);
@@ -78,36 +80,59 @@ begin
     DrawText(_btn.labelText, _btn.outlineColor, textX, textY);
 end;
 
-procedure DrawMenu(connectButton, pauseButton : UIButton);
+procedure DrawMenu(connectButton, pauseButton, nextButton, previousButton : UIButton);
 begin
     ButtonHoverVisual(connectButton);
-    ButtonHoverVisual(pauseButton);
-
     DrawUIButton(connectButton);
-    DrawUIButton(pauseButton);
+
+    // We only want to display these buttons if we have established a connection
+    if CONN <> nil then
+    begin
+        ButtonHoverVisual(pauseButton);
+        DrawUIButton(pauseButton);
+
+        ButtonHoverVisual(nextButton);
+        DrawUIButton(nextButton);
+
+        ButtonHoverVisual(previousButton);
+        DrawUIButton(previousButton);
+    end;
 end;
 
-procedure MenuInput(connectButton, pauseButton : UIButton);
+procedure MenuInput(var connectButton, pauseButton, nextButton, previousButton : UIButton);
 begin
     if ButtonClicked(connectButton) then EstablishConnection();
-    if ButtonClicked(pauseButton) then SendTCPMessage('PAUSE', CONN);
+
+    // We only want to check the input for these buttons if we have established a connection
+    if CONN <> nil then
+    begin
+        if ButtonClicked(pauseButton) then
+        begin
+            SendTCPMessage('PAUSE', CONN);
+            if pauseButton.labelText = 'Pause' then pauseButton.labelText := 'Play'
+            else pauseButton.labelText := 'Pause';
+        end;
+
+        if ButtonClicked(nextButton) then SendTCPMessage('NEXTTRACK', CONN);
+        if ButtonClicked(previousButton) then SendTCPMessage('PREVIOUSTRACK', CONN);
+    end;
 end;
 
 procedure Main();
 var
-    connectButton, pauseButton : UIButton;
+    connectButton, pauseButton, nextButton, previousButton : UIButton;
 begin
     OpenGraphicsWindow('using TCP networked remotes to control music is my passion.', 800, 600);
   
-    LoadAssets(connectButton, pauseButton);
+    LoadAssets(connectButton, pauseButton, nextButton, previousButton);
 
     repeat // The game loop...
         ProcessEvents();
     
         ClearScreen(ColorWhite);
 
-        MenuInput(connectButton, pauseButton);
-        DrawMenu(connectButton, pauseButton);
+        MenuInput(connectButton, pauseButton, nextButton, previousButton);
+        DrawMenu(connectButton, pauseButton, nextButton, previousButton);
 
         RefreshScreen(60);
     until WindowCloseRequested();
