@@ -60,10 +60,11 @@ begin
     result := (CheckButtonIsHovered(_btn)) and (MouseClicked(LeftButton));
 end;
 
-procedure LoadAssets(var connectButton : UIButton);
+procedure LoadAssets(var connectButton, pauseButton : UIButton);
 begin
     // Create our UI buttons
     connectButton := CreateUIButton(10, 10, 80, 30, ColorGrey, ColorBlack, 'Connect!');
+    pauseButton := CreateUIButton(10, 50, 80, 30, ColorGrey, ColorBlack, 'Pause');
 end;
 
 procedure DrawUIButton(_btn : UIButton);
@@ -77,33 +78,36 @@ begin
     DrawText(_btn.labelText, _btn.outlineColor, textX, textY);
 end;
 
-procedure DrawMenu(connectButton : UIButton);
+procedure DrawMenu(connectButton, pauseButton : UIButton);
 begin
     ButtonHoverVisual(connectButton);
+    ButtonHoverVisual(pauseButton);
 
     DrawUIButton(connectButton);
+    DrawUIButton(pauseButton);
 end;
 
-procedure MenuInput(connectButton : UIButton);
+procedure MenuInput(connectButton, pauseButton : UIButton);
 begin
     if ButtonClicked(connectButton) then EstablishConnection();
+    if ButtonClicked(pauseButton) then SendTCPMessage('PAUSE', CONN);
 end;
 
 procedure Main();
 var
-    connectButton : UIButton;
+    connectButton, pauseButton : UIButton;
 begin
     OpenGraphicsWindow('using TCP networked remotes to control music is my passion.', 800, 600);
   
-    LoadAssets(connectButton);
+    LoadAssets(connectButton, pauseButton);
 
     repeat // The game loop...
         ProcessEvents();
     
         ClearScreen(ColorWhite);
 
-        MenuInput(connectButton);
-        DrawMenu(connectButton);
+        MenuInput(connectButton, pauseButton);
+        DrawMenu(connectButton, pauseButton);
 
         RefreshScreen(60);
     until WindowCloseRequested();
