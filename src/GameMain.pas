@@ -9,6 +9,24 @@ type
         labelText : String;
     end;
 
+// It's best if we define these as constants since we may need to access these
+// throughout the program for connection to the host
+const
+    CONN : Connection = nil;
+    PORT : Integer = 4000;
+    HOSTIP : String = '127.0.0.1'; // When testing locally
+
+// Completely lock up the ENTIRE program to connect to the host, cause multithreaded
+// applications are hard to make in pascal (thanks objfpc for not working)
+procedure EstablishConnection();
+begin
+    while CONN = nil do
+    begin
+        CONN := CreateTCPConnection(HOSTIP, PORT);
+    end;
+    if CONN = nil then WriteLn('Whoops');
+end;
+
 function CreateUIButton (_x, _y, _w, _h : Integer; _rColor, _oColor : Color; _lbl : String) : UIButton;
 begin
     result.rectLocX := _x;
@@ -68,7 +86,7 @@ end;
 
 procedure MenuInput(connectButton : UIButton);
 begin
-    if ButtonClicked(connectButton) then WriteLn('Click!');
+    if ButtonClicked(connectButton) then EstablishConnection();
 end;
 
 procedure Main();
