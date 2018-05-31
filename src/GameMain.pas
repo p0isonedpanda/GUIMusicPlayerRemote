@@ -1,5 +1,5 @@
 program GameMain;
-uses SwinGame, sgTypes, math;
+uses SwinGame, sgTypes, math, strutils, sysutils;
 
 type
     UIButton = record
@@ -7,6 +7,15 @@ type
         rectWidth, rectHeight : Integer;
         rectColor, outlineColor : Color;
         labelText : String;
+    end;
+    
+    MusicGenre = (ProgMetal, Remix, Rock, Electropop);
+
+    Album = record
+        name, artist : String;
+        genre : MusicGenre;
+        trackCount : Integer;
+        tracks : Array of String;
     end;
 
 // It's best if we define these as constants since we may need to access these
@@ -25,6 +34,39 @@ begin
         CONN := CreateTCPConnection(HOSTIP, PORT);
     end;
     if CONN = nil then WriteLn('Whoops');
+end;
+
+function ReadInAlbum(longeBoi : String) : Album;
+var
+    count, i : Integer;
+begin
+    // First we count how many elements we need to read in by counting the delimited character "|"
+    // Code from Stack Overflow question "Count how often a character appears in a string"
+    count := 0;
+    for i := 1 to Length(longeBoi) do
+    begin
+        if longeBoi[i] = '|' then count += 1;
+    end;
+    count += 1; // Just to account for the last element
+    
+    // Now we start assigning values to the album record
+    result.name := ExtractDelimited(1, longeBoi, ['|']);
+    result.artist := ExtractDelimited(2, longeBoi, ['|']);
+    case ExtractDelimited(3, longeBoi, ['|']) of
+        'ProgMetal' : result.genre := ProgMetal;
+        'Remix' : result.genre := Remix;
+        'Rock' : result.genre := Rock;
+        'Electropop' : result.genre := Electropop;
+    end;
+    result.trackCount := StrToInt(ExtractDelimited(4, longeBoi, ['|']));
+    // Time for some ARRAY GOODNESS WITH YA BOI
+    SetLength(result.tracks, result.trackCount);
+    i := 5;
+    while i <= count do
+    begin
+        result.tracks[i - 5] := ExtractDelimited(i, longeBoi, ['|']);
+        i += 1;
+    end;
 end;
 
 function CreateUIButton (_x, _y, _w, _h : Integer; _rColor, _oColor : Color; _lbl : String) : UIButton;
@@ -80,7 +122,27 @@ begin
     DrawText(_btn.labelText, _btn.outlineColor, textX, textY);
 end;
 
-procedure DrawMenu(connectButton, pauseButton, nextButton, previousButton : UIButton);
+procedure DrawAlbumInfo(alb : Album);
+var
+    i, textY: Integer;
+    temp : String;
+begin
+    DrawText('Name: ' + alb.name, ColorBlack, 100, 10);
+    DrawText('Artist: ' + alb.artist, ColorBlack, 100, 25);
+    WriteStr(temp, alb.genre);
+    DrawText('Genre: ' + temp, ColorBlack, 100, 40);
+    DrawText('Track count: ' + IntToStr(alb.trackCount), ColorBlack, 100, 55);
+    i := 0;
+    textY := 55;
+    while i < alb.trackCount do
+    begin
+        textY += 15;
+        DrawText('Track ' + IntToStr(i + 1) + ': ' + alb.tracks[i], ColorBlack, 100, textY);
+        i += 1;
+    end;
+end;
+
+procedure DrawMenu(connectButton, pauseButton, nextButton, previousButton : UIButton; var userAlbum : Album);
 begin
     ButtonHoverVisual(connectButton);
     DrawUIButton(connectButton);
@@ -88,6 +150,9 @@ begin
     // We only want to display these buttons if we have established a connection
     if CONN <> nil then
     begin
+        if TCPMessageReceived() then userAlbum := ReadInAlbum(ReadMessage(CONN));
+        DrawAlbumInfo(userAlbum);
+
         ButtonHoverVisual(pauseButton);
         DrawUIButton(pauseButton);
 
@@ -121,6 +186,7 @@ end;
 procedure Main();
 var
     connectButton, pauseButton, nextButton, previousButton : UIButton;
+    userAlbum : Album;
 begin
     OpenGraphicsWindow('using TCP networked remotes to control music is my passion.', 800, 600);
   
@@ -132,7 +198,7 @@ begin
         ClearScreen(ColorWhite);
 
         MenuInput(connectButton, pauseButton, nextButton, previousButton);
-        DrawMenu(connectButton, pauseButton, nextButton, previousButton);
+        DrawMenu(connectButton, pauseButton, nextButton, previousButton, userAlbum);
 
         RefreshScreen(60);
     until WindowCloseRequested();
