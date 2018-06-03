@@ -18,6 +18,14 @@ type
         tracks : Array of String;
     end;
 
+    ProgressBar = record
+        bX, bY : Integer;
+        bW, bH : Integer;
+        bColor : Color;
+        fColor : Color;
+        progress : Double; // Track what percentage we need to fill on the bar, ranges from 0 to 1
+    end;
+
 // It's best if we define these as constants since we may need to access these
 // throughout the program for connection to the host
 const
@@ -33,7 +41,13 @@ begin
     begin
         CONN := CreateTCPConnection(HOSTIP, PORT);
     end;
-    if CONN = nil then WriteLn('Whoops');
+end;
+
+function ClampDouble(value, min, max : Double) : Double;
+begin
+    if value < min then result := min
+    else if value > max then result := max
+    else result := value;
 end;
 
 function ReadInAlbum(longeBoi : String) : Album;
@@ -80,6 +94,29 @@ begin
     result.labelText := _lbl;
 end;
 
+function CreateProgressBar(_bX, _bY, _bW, _bH : Integer; _bColor, _fColor : Color) : ProgressBar;
+begin
+    result.bX := _bX;
+    result.bY := _bY;
+    result.bW := _bW;
+    result.bH := _bH;
+    result.bColor := _bColor;
+    result.fColor := _fColor;
+    result.progress := 0.0;
+end;
+
+// This will allow us to add a modifier to the progress bar
+procedure ModifyProgress(var _pb : ProgressBar; modifier : Double);
+begin
+    _pb.progress := ClampDouble(_pb.progress + modifier, 0.0, 1.0);
+end;
+
+// This will allow us to set the progress of a progress bar
+procedure SetProgress(var _pb : Progressbar; value : Double);
+begin
+    _pb.progress := ClampDouble(value, 0.0, 1.0);
+end;
+
 function CheckButtonIsHovered(_btn : UIButton) : Boolean;
 begin
     result := PointInRect
@@ -102,13 +139,16 @@ begin
     result := (CheckButtonIsHovered(_btn)) and (MouseClicked(LeftButton));
 end;
 
-procedure LoadAssets(var connectButton, pauseButton, nextButton, previousButton : UIButton);
+procedure LoadAssets(var connectButton, pauseButton, nextButton, previousButton : UIButton; var volumeBar : ProgressBar);
 begin
     // Create our UI buttons
     connectButton := CreateUIButton(10, 10, 80, 30, ColorGrey, ColorBlack, 'Connect!');
     pauseButton := CreateUIButton(10, 50, 80, 30, ColorGrey, ColorBlack, 'Pause');
     nextButton := CreateUIButton(10, 90, 80, 30, ColorGrey, ColorBlack, 'Next');
     previousButton := CreateUIButton(10, 130, 80, 30, ColorGrey, ColorBlack, 'Previous');
+
+    // Create our volume bar
+    volumeBar := CreateProgressBar(10, 470, 780, 20, ColorRed, ColorGreen);
 end;
 
 procedure DrawUIButton(_btn : UIButton);
@@ -122,6 +162,16 @@ begin
     DrawText(_btn.labelText, _btn.outlineColor, textX, textY);
 end;
 
+procedure DrawProgressBar(_pg : ProgressBar);
+begin
+    // First we draw the background
+    FillRectangle(_pg.bColor, _pg.bX, _pg.bY, _pg.bW, _pg.bH);
+    // Then we need to draw the foreground on that
+    FillRectangle(_pg.fColor, _pg.bX, _pg.bY, Round(_pg.bW * _pg.progress), _pg.bH);
+    // Then we can draw an outline for it
+    DrawRectangle(ColorBlack, _pg.bX, _pg.bY, _pg.bW, _pg.bH);
+end;
+
 procedure DrawAlbumInfo(alb : Album);
 var
     i, textY: Integer;
@@ -129,7 +179,12 @@ var
 begin
     DrawText('Name: ' + alb.name, ColorBlack, 100, 10);
     DrawText('Artist: ' + alb.artist, ColorBlack, 100, 25);
-    WriteStr(temp, alb.genre);
+    case alb.genre of
+        ProgMetal : temp := 'Prog Metal';
+        Remix : temp := 'Remix';
+        Rock : temp := 'Rock';
+        Electropop : temp := 'Electropop';
+    end;
     DrawText('Genre: ' + temp, ColorBlack, 100, 40);
     DrawText('Track count: ' + IntToStr(alb.trackCount), ColorBlack, 100, 55);
     i := 0;
@@ -142,7 +197,7 @@ begin
     end;
 end;
 
-procedure DrawMenu(connectButton, pauseButton, nextButton, previousButton : UIButton; var userAlbum : Album);
+procedure DrawMenu(connectButton, pauseButton, nextButton, previousButton : UIButton; volumeBar : ProgressBar;  var userAlbum : Album);
 begin
     ButtonHoverVisual(connectButton);
     DrawUIButton(connectButton);
@@ -161,6 +216,8 @@ begin
 
         ButtonHoverVisual(previousButton);
         DrawUIButton(previousButton);
+        
+        DrawProgressbar(volumeBar);
     end;
 end;
 
@@ -186,11 +243,12 @@ end;
 procedure Main();
 var
     connectButton, pauseButton, nextButton, previousButton : UIButton;
+    volumeBar : ProgressBar;
     userAlbum : Album;
 begin
     OpenGraphicsWindow('using TCP networked remotes to control music is my passion.', 800, 600);
   
-    LoadAssets(connectButton, pauseButton, nextButton, previousButton);
+    LoadAssets(connectButton, pauseButton, nextButton, previousButton, volumeBar);
 
     repeat // The game loop...
         ProcessEvents();
@@ -198,7 +256,7 @@ begin
         ClearScreen(ColorWhite);
 
         MenuInput(connectButton, pauseButton, nextButton, previousButton);
-        DrawMenu(connectButton, pauseButton, nextButton, previousButton, userAlbum);
+        DrawMenu(connectButton, pauseButton, nextButton, previousButton, volumeBar, userAlbum);
 
         RefreshScreen(60);
     until WindowCloseRequested();
