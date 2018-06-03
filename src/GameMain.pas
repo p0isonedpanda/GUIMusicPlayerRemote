@@ -180,6 +180,7 @@ begin
     begin
         newWidth := Round(MouseX() - _pg.bX);
         _pg.progress := newWidth / _pg.bW;
+        SendTCPMessage('VOLUME|' + FloatToStr(_pg.progress), CONN);
     end;
 end;
 
