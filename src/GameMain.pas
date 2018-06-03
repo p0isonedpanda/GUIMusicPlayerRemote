@@ -105,12 +105,6 @@ begin
     result.progress := 0.0;
 end;
 
-// This will allow us to add a modifier to the progress bar
-procedure ModifyProgress(var _pb : ProgressBar; modifier : Double);
-begin
-    _pb.progress := ClampDouble(_pb.progress + modifier, 0.0, 1.0);
-end;
-
 // This will allow us to set the progress of a progress bar
 procedure SetProgress(var _pb : Progressbar; value : Double);
 begin
@@ -149,6 +143,7 @@ begin
 
     // Create our volume bar
     volumeBar := CreateProgressBar(10, 470, 780, 20, ColorRed, ColorGreen);
+    SetProgress(volumeBar, 1.0);
 end;
 
 procedure DrawUIButton(_btn : UIButton);
@@ -234,6 +229,7 @@ begin
         ButtonHoverVisual(previousButton);
         DrawUIButton(previousButton);
         
+        DrawText('Volume', ColorBlack, 10, volumeBar.bY - 20);
         DrawProgressbar(volumeBar);
     end;
 end;
