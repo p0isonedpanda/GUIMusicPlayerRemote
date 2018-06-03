@@ -172,6 +172,17 @@ begin
     DrawRectangle(ColorBlack, _pg.bX, _pg.bY, _pg.bW, _pg.bH);
 end;
 
+procedure DragSlider(var _pg : ProgressBar);
+var
+    newWidth : Integer;
+begin
+    if (PointInRect(MouseX(), MouseY(), _pg.bX, _pg.bY, _pg.bW, _pg.bH)) and (MouseDown(LeftButton)) then
+    begin
+        newWidth := Round(MouseX() - _pg.bX);
+        _pg.progress := newWidth / _pg.bW;
+    end;
+end;
+
 procedure DrawAlbumInfo(alb : Album);
 var
     i, textY: Integer;
@@ -226,7 +237,7 @@ begin
     end;
 end;
 
-procedure MenuInput(var connectButton, pauseButton, nextButton, previousButton : UIButton);
+procedure MenuInput(var connectButton, pauseButton, nextButton, previousButton : UIButton; var volumeBar : ProgressBar);
 begin
     if ButtonClicked(connectButton) then EstablishConnection();
 
@@ -242,6 +253,8 @@ begin
 
         if ButtonClicked(nextButton) then SendTCPMessage('NEXTTRACK', CONN);
         if ButtonClicked(previousButton) then SendTCPMessage('PREVIOUSTRACK', CONN);
+
+        DragSlider(volumeBar);
     end;
 end;
 
@@ -260,7 +273,7 @@ begin
     
         ClearScreen(ColorWhite);
 
-        MenuInput(connectButton, pauseButton, nextButton, previousButton);
+        MenuInput(connectButton, pauseButton, nextButton, previousButton, volumeBar);
         DrawMenu(connectButton, pauseButton, nextButton, previousButton, volumeBar, userAlbum);
 
         RefreshScreen(60);
