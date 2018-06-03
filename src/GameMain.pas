@@ -205,7 +205,12 @@ begin
     // We only want to display these buttons if we have established a connection
     if CONN <> nil then
     begin
-        if TCPMessageReceived() then userAlbum := ReadInAlbum(ReadMessage(CONN));
+        if TCPMessageReceived() then
+        begin
+            userAlbum := ReadInAlbum(ReadMessage(CONN));
+            ClearMessageQueue(CONN);
+        end;
+
         DrawAlbumInfo(userAlbum);
 
         ButtonHoverVisual(pauseButton);
